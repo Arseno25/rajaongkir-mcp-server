@@ -1,70 +1,160 @@
-# 🚀 RajaOngkir MCP Server
+# RajaOngkir MCP Server
 
 <p align="center">
   <a href="README.md">🇬🇧 English</a> •
   <a href="README.id.md">🇮🇩 Bahasa Indonesia</a>
 </p>
 
-Server **Model Context Protocol (MCP)** untuk integrasi dengan **RajaOngkir Komerce V2 API** - cek ongkir dan lacak paket pengiriman Indonesia.
+Server [Model Context Protocol (MCP)](https://modelcontextprotocol.io) yang ringan untuk mengintegrasikan AI assistant seperti Claude dan Cursor dengan RajaOngkir API - cek ongkir dan lacak paket Indonesia.
 
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+- [Contoh Interaksi](#contoh-interaksi)
+- [Tools](#tools)
+  - [Pencarian Lokasi](#pencarian-lokasi)
+  - [Lokasi Hierarkis](#lokasi-hierarkis)
+  - [Kalkulasi Ongkir](#kalkulasi-ongkir)
+  - [Lacak Paket](#lacak-paket)
+- [Setup](#setup)
+  - [Prasyarat](#prasyarat)
+  - [Instalasi](#instalasi)
+  - [Konfigurasi](#konfigurasi)
+- [Integrasi dengan Claude Desktop dan Cursor](#integrasi-dengan-claude-desktop-dan-cursor)
 
----
+## Contoh Interaksi
 
-## ✨ Fitur
+- "Hitung ongkir dari Jakarta ke Surabaya untuk paket 1kg"
+- "Bandingkan harga JNE, SiCepat, dan J&T dari Bandung ke Yogyakarta"
+- "Lacak paket saya dengan resi JNE1234567890"
+- "Tampilkan semua kecamatan di Jakarta Pusat"
 
-- 🔍 **Pencarian Lokasi** - Cari kota/kecamatan domestik dan tujuan internasional
-- 🗺️ **Lokasi Hierarkis** - Pilih lokasi bertahap (Provinsi → Kota → Kecamatan → Kelurahan)
-- 💰 **Hitung Ongkir** - Kalkulasi biaya pengiriman domestik dan internasional
-- 📦 **Lacak Paket** - Tracking pengiriman dari 20+ kurir Indonesia
-- ⚡ **Multi-Kurir** - Bandingkan harga dari beberapa kurir sekaligus
-- 🛡️ **Validasi Input** - Validasi otomatis untuk semua parameter
-- 📋 **Response Standar** - Format JSON response yang konsisten
+## Tools
 
----
+### Pencarian Lokasi
 
-## 🚚 Kurir yang Didukung
+1. **searchDomesticDestination**
+   - Deskripsi: Cari kota/kecamatan di Indonesia
+   - Parameter:
+     - `query` (string): Nama lokasi yang dicari
+   - Return: Daftar lokasi yang cocok beserta ID
+   - Contoh: `searchDomesticDestination("Jakarta")`
 
-**Domestik:** JNE, SiCepat, J&T, POS Indonesia, TIKI, AnterAja, Ninja Xpress, Lion Parcel, ID Express, dan 10+ lainnya
+2. **searchInternationalDestination**
+   - Deskripsi: Cari negara tujuan internasional
+   - Parameter:
+     - `query` (string): Nama negara yang dicari
+   - Return: Daftar negara yang cocok beserta ID
+   - Contoh: `searchInternationalDestination("Singapore")`
 
-**Internasional:** POS Indonesia, JNE, TIKI, EMS
+### Lokasi Hierarkis
 
----
+3. **getProvinces**
+   - Deskripsi: Ambil semua provinsi Indonesia
+   - Parameter: Tidak ada
+   - Return: Daftar provinsi beserta ID
+   - Contoh: `getProvinces()`
 
-## 📦 Instalasi
+4. **getCities**
+   - Deskripsi: Ambil kota dalam provinsi
+   - Parameter:
+     - `province_id` (string): ID provinsi
+   - Return: Daftar kota beserta ID
+   - Contoh: `getCities("6")` (DKI Jakarta)
+
+5. **getDistricts**
+   - Deskripsi: Ambil kecamatan dalam kota
+   - Parameter:
+     - `city_id` (string): ID kota
+   - Return: Daftar kecamatan beserta ID
+   - Contoh: `getDistricts("152")` (Jakarta Pusat)
+
+6. **getSubdistricts**
+   - Deskripsi: Ambil kelurahan dalam kecamatan
+   - Parameter:
+     - `district_id` (string): ID kecamatan
+   - Return: Daftar kelurahan beserta ID
+   - Contoh: `getSubdistricts("2096")`
+
+### Kalkulasi Ongkir
+
+7. **calculateDomesticCost**
+   - Deskripsi: Hitung ongkir domestik menggunakan ID lokasi dari pencarian
+   - Parameter:
+     - `origin` (string): ID lokasi asal
+     - `destination` (string): ID lokasi tujuan
+     - `weight` (int): Berat paket dalam gram
+     - `courier` (string): Kode kurir (jne, sicepat, jnt, pos, tiki, dll)
+   - Return: Pilihan ongkos kirim
+   - Contoh: `calculateDomesticCost("12345", "67890", 1000, "jne")`
+
+8. **calculateDistrictCost**
+   - Deskripsi: Hitung ongkir menggunakan ID kecamatan (mendukung multi kurir)
+   - Parameter:
+     - `origin` (string): ID kecamatan asal
+     - `destination` (string): ID kecamatan tujuan
+     - `weight` (int): Berat paket dalam gram
+     - `courier` (string): Kode kurir dipisah titik dua
+   - Return: Pilihan ongkos kirim dari semua kurir
+   - Contoh: `calculateDistrictCost("1391", "1376", 1000, "jne:sicepat:jnt")`
+
+9. **calculateInternationalCost**
+   - Deskripsi: Hitung ongkir internasional
+   - Parameter:
+     - `origin` (string): ID lokasi asal (Indonesia)
+     - `destination` (string): ID negara tujuan
+     - `weight` (int): Berat paket dalam gram
+     - `courier` (string): Kode kurir (pos, jne, tiki, ems)
+   - Return: Pilihan ongkos kirim internasional
+   - Contoh: `calculateInternationalCost("12345", "108", 1000, "pos")`
+
+### Lacak Paket
+
+10. **trackPackage**
+    - Deskripsi: Lacak paket berdasarkan nomor resi
+    - Parameter:
+      - `awb` (string): Nomor resi
+      - `courier` (string): Kode kurir
+    - Return: Status tracking dan riwayat pengiriman
+    - Contoh: `trackPackage("JNE1234567890", "jne")`
+
+## Setup
 
 ### Prasyarat
-- Python 3.10+
-- API Key RajaOngkir Komerce ([Daftar di sini](https://rajaongkir.komerce.id))
 
-### Setup
+- Python 3.10+
+- API Key RajaOngkir Komerce
+
+### Instalasi
 
 ```bash
-# Clone repository
 git clone https://github.com/Arseno25/rajaongkir-mcp-server.git
 cd rajaongkir-mcp-server
-
-# Buat virtual environment
-python -m venv .venv
-.venv\Scripts\activate  # Windows
-source .venv/bin/activate  # Linux/Mac
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Konfigurasi environment
-cp .env.example .env
-# Edit .env dan tambahkan RAJAONGKIR_API_KEY
 ```
 
----
+### Konfigurasi
 
-## 🔌 Integrasi
+Buat file `.env` di root project (bisa copy dari contoh):
 
-### Claude Desktop
+```bash
+cp .env.example .env
+```
 
-Tambahkan ke `claude_desktop_config.json`:
+Edit file dengan API key kamu:
+
+```env
+RAJAONGKIR_API_KEY=api-key-kamu
+RAJAONGKIR_BASE_URL=https://rajaongkir.komerce.id/api/v1
+```
+
+### Mendapatkan API Key RajaOngkir
+
+1. Buka [RajaOngkir Komerce](https://rajaongkir.komerce.id)
+2. Buat akun atau login
+3. Subscribe ke paket (ada paket gratis)
+4. Copy API key dari dashboard
+
+## Integrasi dengan Claude Desktop dan Cursor
+
+Untuk menggunakan MCP server ini dengan Claude Desktop, tambahkan ke konfigurasi Claude (`claude_desktop_config.json`):
 
 ```json
 {
@@ -80,116 +170,18 @@ Tambahkan ke `claude_desktop_config.json`:
 }
 ```
 
-### MCP Inspector (Testing)
+Untuk Cursor, buka tab MCP di Cursor Settings. Tambahkan server dengan command:
 
-```bash
-npx -y @modelcontextprotocol/inspector python server.py
+```
+python path/to/rajaongkir-mcp-server/server.py
 ```
 
----
+### Kurir yang Didukung
 
-## 🛠️ Tools yang Tersedia
+**Domestik:** JNE, SiCepat, J&T, POS Indonesia, TIKI, AnterAja, Ninja Xpress, Lion Parcel, ID Express, SAP, NCS, REX, RPX, Wahana, dan lainnya.
 
-<table>
-  <thead>
-    <tr>
-      <th>Tool</th>
-      <th>Deskripsi</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code>search_domestic_destination</code></td>
-      <td>Cari kota/kecamatan di Indonesia</td>
-    </tr>
-    <tr>
-      <td><code>search_international_destination</code></td>
-      <td>Cari negara tujuan internasional</td>
-    </tr>
-    <tr>
-      <td><code>get_provinces</code></td>
-      <td>Ambil daftar semua provinsi</td>
-    </tr>
-    <tr>
-      <td><code>get_cities</code></td>
-      <td>Ambil daftar kota dalam provinsi</td>
-    </tr>
-    <tr>
-      <td><code>get_districts</code></td>
-      <td>Ambil daftar kecamatan dalam kota</td>
-    </tr>
-    <tr>
-      <td><code>get_subdistricts</code></td>
-      <td>Ambil daftar kelurahan dalam kecamatan</td>
-    </tr>
-    <tr>
-      <td><code>calculate_domestic_cost</code></td>
-      <td>Hitung ongkir domestik</td>
-    </tr>
-    <tr>
-      <td><code>calculate_district_cost</code></td>
-      <td>Hitung ongkir pakai ID kecamatan (multi-kurir)</td>
-    </tr>
-    <tr>
-      <td><code>calculate_international_cost</code></td>
-      <td>Hitung ongkir internasional</td>
-    </tr>
-    <tr>
-      <td><code>track_package</code></td>
-      <td>Lacak paket dengan nomor resi</td>
-    </tr>
-  </tbody>
-</table>
+**Internasional:** POS Indonesia, JNE, TIKI, EMS
 
----
-
-## 💡 Contoh Penggunaan
-
-### Dengan Claude
-
-> "Hitung ongkir dari Jakarta ke Surabaya untuk paket 1kg pakai JNE"
-
-> "Lacak paket saya dengan resi JNE1234567890"
-
-> "Tampilkan semua kota di provinsi DKI Jakarta"
-
-> "Bandingkan harga kirim dari Jakarta ke Bandung pakai JNE, SiCepat, dan J&T"
-
----
-
-## ⚙️ Konfigurasi
-
-<table>
-  <thead>
-    <tr>
-      <th>Environment Variable</th>
-      <th>Wajib</th>
-      <th>Deskripsi</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code>RAJAONGKIR_API_KEY</code></td>
-      <td align="center">✅</td>
-      <td>API key RajaOngkir Komerce kamu</td>
-    </tr>
-    <tr>
-      <td><code>RAJAONGKIR_BASE_URL</code></td>
-      <td align="center">❌</td>
-      <td>Base URL API (default: https://rajaongkir.komerce.id/api/v1)</td>
-    </tr>
-  </tbody>
-</table>
-
----
-
-## 📝 Lisensi
+## Lisensi
 
 Proyek ini dilisensikan di bawah MIT License - lihat file [LICENSE](LICENSE) untuk detail.
-
----
-
-## 🙏 Kredit
-
-- [RajaOngkir Komerce](https://rajaongkir.komerce.id) - Penyedia API pengiriman
-- [Model Context Protocol](https://modelcontextprotocol.io) - Spesifikasi MCP
